@@ -6,7 +6,7 @@ public final class Disposable {
     _disposeFn = fn
   }
   
-  final func dispose() {
+  public final func dispose() {
     _child?.dispose()
     _disposeFn?()
     

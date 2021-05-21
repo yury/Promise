@@ -192,6 +192,17 @@ public final class Promise<O, E> where E: Error {
     }
   }
   
+  public final func flatMapResult<T, NewE>(_ transform: @escaping (Result) -> Promise<T, NewE>) -> Promise<T, NewE> {
+    Promise<T, NewE> { [self] fn in
+      var disposable: Disposable! = nil
+      disposable = self.chain { result in
+        transform(result).on(result: fn).append(to: disposable)
+      }
+      
+      return disposable
+    }
+  }
+  
   public static func just(_ value: O) -> Promise<O, E> {
     Promise<O, E> { fn in
       fn(.success(value))

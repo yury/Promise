@@ -6,6 +6,7 @@ import struct Foundation.URLRequest
 import struct Foundation.URLComponents
 import struct Foundation.URLQueryItem
 import struct Foundation.TimeInterval
+import protocol Foundation.LocalizedError
 
 import class Foundation.URLSession
 import class Foundation.HTTPURLResponse
@@ -89,15 +90,39 @@ public enum Fetch {
     }
   }
   
-  public enum Error: Swift.Error {
+  public enum Error: Swift.Error, LocalizedError {
     case invalidParameter(name: String, message: String)
     case cannotBuildUrl
     case cannotBuildRequest(Swift.Error)
-    case cannotParseJSON
+    case cannotParseJSON(Data)
     case unexpectedError(Swift.Error)
-    case unexpectedResponseStatus(HTTPURLResponse)
+    case unexpectedResponseStatus(DataOutput)
+    case unexpectedResponseFormat(name: String, message: String)
     case authError(Swift.Error)
     case urlError(URLError)
+    
+    public var errorDescription: String? {
+      switch self {
+      case .invalidParameter(name: let name, message: let message):
+        return "Invalid parameter \(name): \(message)"
+      case .cannotBuildUrl:
+        return "Can't build URL"
+      case .cannotBuildRequest(let error):
+        return "Can't build request: \(error)"
+      case .cannotParseJSON(let data):
+        let body = String(data: data, encoding: .utf8) ?? "<Non UTF-8 String>"
+        return "Can't parse json: \"\(body)\""
+      case .unexpectedError(let error):
+        return "Unexpected error: \(error)"
+      case .unexpectedResponseStatus(let output):
+        let body = String(data: output.data, encoding: .utf8) ?? "<Non UTF-8 String>"
+        return "Unexpected response status \(output.response.statusCode): \(output.response)\nbody: \"\(body)\""
+      case .unexpectedResponseFormat(name: let name, message: let message):
+        return "Unexpected response format: \(name) - \(message)"
+      case .authError(let error): return "Authentication Error: \(error)"
+      case .urlError(let error): return "URLError: \(error)"
+      }
+    }
   }
   
   public typealias DataOutput = (data: Data, response: HTTPURLResponse)
@@ -118,10 +143,10 @@ public enum Fetch {
     return data(method, request: request, auth: auth, session: session, expectedStatus: expectedStatus)
       .map { data, response in
         do {
-          let jsonObj = try JSONSerialization.jsonObject(with: data, options: [])
+          let jsonObj = try JSONSerialization.jsonObject(with: data, options: [.allowFragments])
           return .success((json: jsonObj as? [String: Any] ?? [:], response: response))
         } catch {
-          return .failure(.cannotParseJSON)
+          return .failure(.cannotParseJSON(data))
         }
       }
       
@@ -163,7 +188,7 @@ public enum Fetch {
         if expectedStatus.matches(statusCode: statusCode) {
           return .success(output)
         } else {
-          return .failure(.unexpectedResponseStatus(output.response))
+          return .failure(.unexpectedResponseStatus(output))
         }
       })
   }

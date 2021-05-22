@@ -1,23 +1,25 @@
 
 import struct Foundation.URL
 import struct Foundation.URLError
-import struct Foundation.Data
-import struct Foundation.URLRequest
 import struct Foundation.URLComponents
 import struct Foundation.URLQueryItem
+import struct Foundation.Data
 import struct Foundation.TimeInterval
 import protocol Foundation.LocalizedError
 
-import class Foundation.URLSession
-import class Foundation.HTTPURLResponse
 import class Foundation.NSNumber
-
 
 import class Foundation.JSONSerialization
 
 #if canImport(FoundationNetworking)
 import FoundationNetworking
+#else
+import struct Foundation.URLRequest
+
+import class Foundation.HTTPURLResponse
+import class Foundation.URLSession
 #endif
+
 
 public protocol FetchAuthTokenProvider {
   var accessToken: String? { get }
